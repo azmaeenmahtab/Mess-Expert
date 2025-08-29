@@ -1,6 +1,6 @@
 # Mess Expert 🏠🍽️
 
-Mess Expert is a **full-stack web application** designed to simplify the management of mess groups (shared living/eating arrangements). It helps admins and members manage expenses, deposits, and group activities efficiently.
+Mess Expert is a **full-stack web application** designed to simplify the management of mess groups (shared living/eating arrangements). It helps admins and members manage expenses, deposits, meals, and group activities efficiently.
 
 ---
 
@@ -47,10 +47,14 @@ Managing a mess (shared living/food expense system) can be challenging when mult
 
   * Records daily/weekly/monthly expenses.
   * Splits bills fairly among members.
+* **Meal Management**:
+
+  * Tracks meals by member and meal type (breakfast, lunch, dinner).
 * **Dashboard & Reports**:
 
   * Visual breakdown of deposits vs. expenses.
   * Balance report per member.
+  * Monthly summary reports.
 
 ---
 
@@ -76,52 +80,164 @@ React (Frontend) <--> Express API (Backend) <--> PostgreSQL (Database)
 
 ---
 
-## 🗄️ Database Schema
+## 📦 Database Schema
 
-### Users Table
+### 1. Users
 
-| Column   | Type | Description     |
-| -------- | ---- | --------------- |
-| id       | UUID | Primary key     |
-| name     | TEXT | User's name     |
-| email    | TEXT | Unique email    |
-| password | TEXT | Hashed password |
+| Column   | Type         | Description     |
+| -------- | ------------ | --------------- |
+| id       | SERIAL (PK)  | Unique user ID  |
+| fullName | VARCHAR(150) | Full name       |
+| username | VARCHAR(50)  | Unique username |
+| email    | VARCHAR(100) | Unique email    |
+| password | TEXT         | Hashed password |
 
-### Mess Table
+### 2. Members
 
-| Column    | Type | Description           |
-| --------- | ---- | --------------------- |
-| id        | UUID | Primary key           |
-| name      | TEXT | Mess group name       |
-| admin\_id | UUID | References `users.id` |
+| Column         | Type          | Description             |
+| -------------- | ------------- | ----------------------- |
+| member\_id     | SERIAL (PK)   | Unique member ID        |
+| name           | VARCHAR(100)  | Member’s name           |
+| phone\_number  | VARCHAR(20)   | Default: 'my number'    |
+| image          | TEXT          | Profile image           |
+| role           | VARCHAR(20)   | Default: `member`       |
+| joining\_date  | DATE          | Date of joining mess    |
+| total\_deposit | NUMERIC(10,2) | Track member’s deposits |
+| total\_meal    | NUMERIC(10,2) | Track meals count       |
+| user\_id       | INT (FK)      | References `users.id`   |
 
-### Members Table
+### 3. Mess
 
-| Column   | Type | Description           |
-| -------- | ---- | --------------------- |
-| id       | UUID | Primary key           |
-| mess\_id | UUID | References `mess.id`  |
-| user\_id | UUID | References `users.id` |
+| Column    | Type         | Description                    |
+| --------- | ------------ | ------------------------------ |
+| mess\_id  | SERIAL (PK)  | Unique mess ID                 |
+| name      | VARCHAR(100) | Mess name                      |
+| location  | TEXT         | Mess location                  |
+| admin\_id | INT (FK)     | References `members.member_id` |
 
-### Deposits Table
+### 4. MemberMess (Mapping Table)
 
-| Column    | Type    | Description           |
-| --------- | ------- | --------------------- |
-| id        | UUID    | Primary key           |
-| user\_id  | UUID    | References `users.id` |
-| mess\_id  | UUID    | References `mess.id`  |
-| amount    | NUMERIC | Deposit amount        |
-| createdAt | DATE    | Timestamp             |
+| Column     | Type      | Description                    |
+| ---------- | --------- | ------------------------------ |
+| member\_id | INT (FK)  | References `members.member_id` |
+| mess\_id   | INT (FK)  | References `mess.mess_id`      |
+| joined\_at | TIMESTAMP | Default: `CURRENT_TIMESTAMP`   |
 
-### Expenses Table
+### 5. Meals
 
-| Column    | Type    | Description          |
-| --------- | ------- | -------------------- |
-| id        | UUID    | Primary key          |
-| mess\_id  | UUID    | References `mess.id` |
-| title     | TEXT    | Expense title        |
-| amount    | NUMERIC | Expense amount       |
-| createdAt | DATE    | Timestamp            |
+| Column     | Type        | Description                    |
+| ---------- | ----------- | ------------------------------ |
+| meal\_id   | SERIAL (PK) | Unique meal ID                 |
+| member\_id | INT (FK)    | References `members.member_id` |
+| mess\_id   | INT (FK)    | References `mess.mess_id`      |
+| date       | DATE        | Meal date                      |
+| meal\_type | VARCHAR(20) | (Breakfast, Lunch, Dinner)     |
+
+### 6. Deposits
+
+| Column      | Type          | Description                    |
+| ----------- | ------------- | ------------------------------ |
+| deposit\_id | SERIAL (PK)   | Unique deposit ID              |
+| member\_id  | INT (FK)      | References `members.member_id` |
+| mess\_id    | INT (FK)      | References `mess.mess_id`      |
+| amount      | NUMERIC(10,2) | Deposit amount                 |
+| date        | DATE          | Date of deposit                |
+| note        | TEXT          | Optional note                  |
+
+### 7. Expenses
+
+| Column      | Type          | Description                    |
+| ----------- | ------------- | ------------------------------ |
+| expense\_id | SERIAL (PK)   | Unique expense ID              |
+| mess\_id    | INT (FK)      | References `mess.mess_id`      |
+| member\_id  | INT (FK)      | References `members.member_id` |
+| category    | VARCHAR(50)   | Expense category               |
+| amount      | NUMERIC(10,2) | Expense amount                 |
+| date        | DATE          | Expense date                   |
+| description | TEXT          | Details                        |
+| is\_settled | BOOLEAN       | Default: `FALSE`               |
+
+### 8. BillSplits
+
+| Column        | Type          | Description                      |
+| ------------- | ------------- | -------------------------------- |
+| split\_id     | SERIAL (PK)   | Unique split ID                  |
+| expense\_id   | INT (FK)      | References `expenses.expense_id` |
+| member\_id    | INT (FK)      | References `members.member_id`   |
+| split\_amount | NUMERIC(10,2) | Amount assigned to member        |
+| status        | VARCHAR(20)   | Default: `pending`               |
+
+### 9. Dues
+
+| Column      | Type          | Description                      |
+| ----------- | ------------- | -------------------------------- |
+| due\_id     | SERIAL (PK)   | Unique due ID                    |
+| member\_id  | INT (FK)      | References `members.member_id`   |
+| expense\_id | INT (FK)      | References `expenses.expense_id` |
+| amount\_due | NUMERIC(10,2) | Due amount                       |
+| due\_date   | DATE          | When due is expected             |
+
+### 10. Payments
+
+| Column          | Type          | Description                    |
+| --------------- | ------------- | ------------------------------ |
+| payment\_id     | SERIAL (PK)   | Unique payment ID              |
+| member\_id      | INT (FK)      | References `members.member_id` |
+| transaction\_id | INT           | External ref (if needed)       |
+| amount\_paid    | NUMERIC(10,2) | Payment amount                 |
+| paid\_on        | DATE          | Payment date                   |
+| payment\_method | VARCHAR(50)   | e.g., Cash, Mobile Banking     |
+
+### 11. Notifications
+
+| Column           | Type        | Description                    |
+| ---------------- | ----------- | ------------------------------ |
+| notification\_id | SERIAL (PK) | Unique notification ID         |
+| member\_id       | INT (FK)    | References `members.member_id` |
+| message          | TEXT        | Notification text              |
+| date\_time       | TIMESTAMP   | Default: `CURRENT_TIMESTAMP`   |
+| status           | VARCHAR(20) | Default: `unread`              |
+| type             | VARCHAR(50) | e.g., Deposit, Expense, Alert  |
+
+### 12. MonthlyReports
+
+| Column         | Type          | Description                  |
+| -------------- | ------------- | ---------------------------- |
+| report\_id     | SERIAL (PK)   | Unique report ID             |
+| mess\_id       | INT (FK)      | References `mess.mess_id`    |
+| month          | VARCHAR(20)   | e.g., July 2025              |
+| total\_meals   | NUMERIC(10,2) | Total meals                  |
+| total\_expense | NUMERIC(10,2) | Total expenses               |
+| generated\_on  | TIMESTAMP     | Default: `CURRENT_TIMESTAMP` |
+
+### 13. Market Schedule
+
+| Column       | Type        | Description               |
+| ------------ | ----------- | ------------------------- |
+| market\_id   | SERIAL (PK) | Unique market ID          |
+| mess\_id     | INT (FK)    | References `mess.mess_id` |
+| user\_id     | INT (FK)    | References `users.id`     |
+| market\_date | DATE        | Default: `CURRENT_DATE`   |
+
+### 14. Personal Deposits
+
+| Column        | Type          | Description             |
+| ------------- | ------------- | ----------------------- |
+| deposit\_id   | SERIAL (PK)   | Unique ID               |
+| user\_id      | INT (FK)      | References `users.id`   |
+| amount        | NUMERIC(10,2) | Deposit amount          |
+| description   | TEXT          | Note                    |
+| deposit\_date | DATE          | Default: `CURRENT_DATE` |
+
+### 15. Personal Expenses
+
+| Column        | Type          | Description             |
+| ------------- | ------------- | ----------------------- |
+| expense\_id   | SERIAL (PK)   | Unique ID               |
+| user\_id      | INT (FK)      | References `users.id`   |
+| amount        | NUMERIC(10,2) | Expense amount          |
+| description   | TEXT          | Note                    |
+| expense\_date | DATE          | Default: `CURRENT_DATE` |
 
 ---
 
@@ -150,35 +266,6 @@ cd frontend
 npm install
 npm start
 ```
-
----
-
-## 🌐 API Endpoints
-
-### Auth
-
-* `POST /api/auth/register` → Register a new user
-* `POST /api/auth/login` → Login and receive JWT
-
-### Mess Groups
-
-* `POST /api/mess` → Create a new mess group (admin)
-* `GET /api/mess/:id` → Get mess details
-
-### Members
-
-* `POST /api/members` → Add member to mess group
-* `GET /api/members/:mess_id` → List mess members
-
-### Deposits
-
-* `POST /api/deposits` → Add deposit
-* `GET /api/deposits/:mess_id` → Get all deposits in a mess
-
-### Expenses
-
-* `POST /api/expenses` → Add expense
-* `GET /api/expenses/:mess_id` → Get all expenses
 
 ---
 
