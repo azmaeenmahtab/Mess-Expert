@@ -281,8 +281,12 @@ npm start
 
 ## 👨‍💻 Contributors
 
-* **Your Name** – Full Stack Developer
-* \[Add your teammates if any]
+* **Azmaeen Mahtab Ezaz** – Full Stack Developer
+* **MD Selim** – Full Stack and Devops
+* **Jisan** – Frontend
+* **Dip** – Backend
+* **Saiful Islam** – UI/UX Designer
+  
 
 ---
 
